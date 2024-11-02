@@ -9,13 +9,16 @@
     
     <!-- Meta tags for iOS PWA support -->
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    
-    <!-- Icons for iOS home screen -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Big 2 Tracker">
+
+    <!-- Icons for iOS home screen (make sure these paths are correct) -->
     <link rel="apple-touch-icon" href="icon-192x192.png">
     <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icon-192x192.png">
 
     <style>
+        /* Your existing CSS styles */
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
@@ -35,42 +38,9 @@
             width: 90%;
             max-width: 800px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #333;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-        }
-        input[type="text"], input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-        }
-        button {
-            margin-top: 20px;
-            padding: 10px 15px;
-            background-color: #333;
-            color: #fff;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #555;
-        }
-        .win {
-            background-color: #c8e6c9;
-        }
-        .loss {
-            background-color: #ffcdd2;
-        }
     </style>
 </head>
+
 <body>
 <div class="container">
     <h1>Big 2 Tracker</h1>
