@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big 2 Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #555;
+        }
+        .win {
+            background-color: #c8e6c9;
+        }
+        .loss {
+            background-color: #ffcdd2;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Big 2 Tracker</h1>
+    <div id="gameDetailsForm">
+        <label>Player Names:</label><br>
+        <input type="text" id="player1" placeholder="Player 1">
+        <input type="text" id="player2" placeholder="Player 2">
+        <input type="text" id="player3" placeholder="Player 3">
+        <input type="text" id="player4" placeholder="Player 4">
+        <div>
+            <label for="rate">Rate:</label>
+            <input type="number" id="rate" value="0.1" step="0.01">
+        </div>
+        <button onclick="saveGameDetails()">Save Game Details</button>
+    </div>
+    <table id="summaryTable">
+        <thead>
+        <tr>
+            <th></th>
+            <th id="player1Header">P1</th>
+            <th id="player2Header">P2</th>
+            <th id="player3Header">P3</th>
+            <th id="player4Header">P4</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <th>Total Cards</th>
+            <td id="totalP1">0</td>
+            <td id="totalP2">0</td>
+            <td id="totalP3">0</td>
+            <td id="totalP4">0</td>
+        </tr>
+        <tr>
+            <th>Total Wins</th>
+            <td id="winsP1">0</td>
+            <td id="winsP2">0</td>
+            <td id="winsP3">0</td>
+            <td id="winsP4">0</td>
+        </tr>
+        <tr>
+            <th>Win %</th>
+            <td id="winPctP1">0%</td>
+            <td id="winPctP2">0%</td>
+            <td id="winPctP3">0%</td>
+            <td id="winPctP4">0%</td>
+        </tr>
+        <tr>
+            <th>Win/Loss $$</th>
+            <td id="wlP1">$0.00</td>
+            <td id="wlP2">$0.00</td>
+            <td id="wlP3">$0.00</td>
+            <td id="wlP4">$0.00</td>
+        </tr>
+        </tbody>
+    </table>
+    <button onclick="addGameRow()">Add Game</button>
+    <table id="scoreTable">
+        <thead>
+        <tr>
+            <th>Game #</th>
+            <th id="player1HeaderGame">P1</th>
+            <th id="player2HeaderGame">P2</th>
+            <th id="player3HeaderGame">P3</th>
+            <th id="player4HeaderGame">P4</th>
+            <th>Save</th>
+        </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    <button onclick="editGameDetails()">Edit Game Details</button>
+    <button onclick="clearData()">Clear Data</button>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', loadSavedData);
+
+    function addGameRow() {
+        const tableBody = document.querySelector('#scoreTable tbody');
+        const rowCount = tableBody.rows.length + 1;
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>Game ${rowCount}</td>
+            <td><input type="number" class="score" data-player="1" min="0" max="99" value="0" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="2" min="0" max="99" value="0" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="3" min="0" max="99" value="0" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="4" min="0" max="99" value="0" style="width: 40px;"></td>
+            <td><button onclick="saveRow(this)" style="background-color: red;">Save</button></td>
+        `;
+        tableBody.insertBefore(row, tableBody.firstChild);
+    }
+
+    function saveRow(button) {
+        const row = button.parentElement.parentElement;
+        const cells = row.querySelectorAll('input');
+        let valid = true;
+        cells.forEach(cell => {
+            if (cell.value === '' || parseInt(cell.value) < 0 || parseInt(cell.value) > 99) {
+                alert('All scores must be filled in, greater than or equal to 0, and less than or equal to 99.');
+                alert('All scores must be filled in and greater than or equal to 0.');
+                valid = false;
+            }
+        });
+        if (!valid) {
+            return;
+        }
+        button.style.backgroundColor = 'green';
+        updateScores();
+        saveToLocalStorage();
+    }
+
+    function updateScores() {
+        const rate = parseFloat(document.getElementById('rate').value);
+        const scores = document.querySelectorAll('.score');
+        let totals = [0, 0, 0, 0];
+        let wins = [0, 0, 0, 0];
+        let gamesPlayed = [0, 0, 0, 0];
+
+        scores.forEach(score => {
+            const playerIndex = parseInt(score.dataset.player) - 1;
+            const value = parseInt(score.value);
+            totals[playerIndex] += value;
+        });
+
+        totals.forEach((total, index) => {
+            document.getElementById(`totalP${index + 1}`).textContent = total;
+        });
+
+        const rows = document.querySelectorAll('#scoreTable tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('input');
+            const scores = Array.from(cells).map(cell => parseInt(cell.value));
+            scores.forEach((score, index) => {
+                gamesPlayed[index]++;
+                if (score === 0) {
+                    wins[index]++;
+                }
+            });
+        });
+
+        wins.forEach((win, index) => {
+            document.getElementById(`winsP${index + 1}`).textContent = win;
+            const winPct = gamesPlayed[index] > 0 ? ((win / gamesPlayed[index]) * 100).toFixed(2) : 0;
+            document.getElementById(`winPctP${index + 1}`).textContent = `${winPct}%`;
+        });
+
+        let wlValues = [0, 0, 0, 0];
+        for (let i = 0; i < 4; i++) {
+            wlValues[i] = rate * totals.reduce((sum, total, j) => {
+                return sum + ((i === j ? -3 : 1) * total);
+            }, 0);
+            const wlElement = document.getElementById(`wlP${i + 1}`);
+            wlElement.textContent = `$${wlValues[i].toFixed(2)}`;
+            wlElement.classList.remove('win', 'loss');
+            if (wlValues[i] > 0) {
+                wlElement.classList.add('win');
+            } else if (wlValues[i] < 0) {
+                wlElement.classList.add('loss');
+            }
+        }
+    }
+
+    function saveToLocalStorage() {
+        const data = {
+            rate: document.getElementById('rate').value,
+            playerNames: [
+                document.getElementById('player1').value,
+                document.getElementById('player2').value,
+                document.getElementById('player3').value,
+                document.getElementById('player4').value
+            ],
+            rows: []
+        };
+
+        const rows = document.querySelectorAll('#scoreTable tbody tr');
+        rows.forEach(row => {
+            const cells = row.querySelectorAll('input');
+            const rowData = Array.from(cells).map(cell => cell.value);
+            const button = row.querySelector('button');
+            const buttonColor = button.style.backgroundColor;
+            data.rows.push({ scores: rowData, buttonColor: buttonColor });
+        });
+
+        localStorage.setItem('playerScoreData', JSON.stringify(data));
+    }
+
+    function loadSavedData() {
+        const savedData = localStorage.getItem('playerScoreData');
+        if (savedData) {
+            const data = JSON.parse(savedData);
+
+            document.getElementById('rate').value = data.rate;
+            document.getElementById('player1').value = data.playerNames[0];
+            document.getElementById('player2').value = data.playerNames[1];
+            document.getElementById('player3').value = data.playerNames[2];
+            document.getElementById('player4').value = data.playerNames[3];
+
+            const playerHeaders = [
+                document.getElementById('player1Header'),
+                document.getElementById('player2Header'),
+                document.getElementById('player3Header'),
+                document.getElementById('player4Header'),
+                document.getElementById('player1HeaderGame'),
+                document.getElementById('player2HeaderGame'),
+                document.getElementById('player3HeaderGame'),
+                document.getElementById('player4HeaderGame')
+            ];
+
+            playerHeaders[0].textContent = data.playerNames[0] || 'P1';
+            playerHeaders[1].textContent = data.playerNames[1] || 'P2';
+            playerHeaders[2].textContent = data.playerNames[2] || 'P3';
+            playerHeaders[3].textContent = data.playerNames[3] || 'P4';
+            playerHeaders[4].textContent = data.playerNames[0] || 'P1';
+            playerHeaders[5].textContent = data.playerNames[1] || 'P2';
+            playerHeaders[6].textContent = data.playerNames[2] || 'P3';
+            playerHeaders[7].textContent = data.playerNames[3] || 'P4';
+
+            data.rows.forEach(rowData => {
+                addGameRow();
+                const newRow = document.querySelector('#scoreTable tbody tr:first-child');
+                const cells = newRow.querySelectorAll('input');
+                rowData.scores.forEach((value, index) => {
+                    cells[index].value = value;
+                });
+                const saveButton = newRow.querySelector('button');
+                saveButton.style.backgroundColor = rowData.buttonColor;
+            });
+
+            updateScores();
+        }
+    }
+
+    function clearData() {
+        if (confirm('Are you sure you want to clear all data? This will delete all scores and player names.')) {
+            localStorage.removeItem('playerScoreData');
+            location.reload();
+        }
+    }
+
+    function saveGameDetails() {
+        const playerNames = [
+            document.getElementById('player1').value,
+            document.getElementById('player2').value,
+            document.getElementById('player3').value,
+            document.getElementById('player4').value
+        ];
+        if (playerNames.some(name => name.trim() === '')) {
+            alert('Please fill in all player names before proceeding.');
+            return;
+        }
+        document.getElementById('gameDetailsForm').style.display = 'none';
+        const playerHeaders = [
+            document.getElementById('player1Header'),
+            document.getElementById('player2Header'),
+            document.getElementById('player3Header'),
+            document.getElementById('player4Header'),
+            document.getElementById('player1HeaderGame'),
+            document.getElementById('player2HeaderGame'),
+            document.getElementById('player3HeaderGame'),
+            document.getElementById('player4HeaderGame')
+        ];
+
+        playerHeaders[0].textContent = playerNames[0] || 'P1';
+        playerHeaders[1].textContent = playerNames[1] || 'P2';
+        playerHeaders[2].textContent = playerNames[2] || 'P3';
+        playerHeaders[3].textContent = playerNames[3] || 'P4';
+        playerHeaders[4].textContent = playerNames[0] || 'P1';
+        playerHeaders[5].textContent = playerNames[1] || 'P2';
+        playerHeaders[6].textContent = playerNames[2] || 'P3';
+        playerHeaders[7].textContent = playerNames[3] || 'P4';
+        saveToLocalStorage();
+    }
+
+    function editGameDetails() {
+        document.getElementById('gameDetailsForm').style.display = 'block';
+    }
+
+    document.querySelectorAll('input[type="text"]').forEach((input, index) => {
+        input.addEventListener('input', () => {
+            const header = document.getElementById(`player${index + 1}Header`);
+            const headerGame = document.getElementById(`player${index + 1}HeaderGame`);
+            header.textContent = input.value || `P${index + 1}`;
+            headerGame.textContent = input.value || `P${index + 1}`;
+            saveToLocalStorage();
+        });
+    });
+</script>
+</body>
+</html>
+
+
+
