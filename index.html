@@ -144,10 +144,10 @@
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>Game ${rowCount}</td>
-            <td><input type="number" class="score" data-player="1" min="0" max="99" value="0" style="width: 40px;"></td>
-            <td><input type="number" class="score" data-player="2" min="0" max="99" value="0" style="width: 40px;"></td>
-            <td><input type="number" class="score" data-player="3" min="0" max="99" value="0" style="width: 40px;"></td>
-            <td><input type="number" class="score" data-player="4" min="0" max="99" value="0" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="1" min="0" max="99" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="2" min="0" max="99" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="3" min="0" max="99" style="width: 40px;"></td>
+            <td><input type="number" class="score" data-player="4" min="0" max="99" style="width: 40px;"></td>
             <td><button onclick="saveRow(this)" style="background-color: red;">Save</button></td>
         `;
         tableBody.insertBefore(row, tableBody.firstChild);
@@ -350,4 +350,8 @@
 </script>
 </body>
 </html>
+
+
+
+
 
