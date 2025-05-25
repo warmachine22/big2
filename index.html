@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Big 2 Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s; /* For theme changes if any */
+        }
+        .win {
+            background-color: #c8e6c9 !important;
+            color: #1e4620 !important;
+        }
+        .loss {
+            background-color: #ffcdd2 !important;
+            color: #b71c1c !important;
+        }
+        #scoreTable input[type="number"].score { /* Ensure specificity */
+            width: 60px;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            border: 1px solid #d1d5db;
+            text-align: center;
+        }
+        .table-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem; /* Tailwind's rounded-md */
+            color: white;
+            font-weight: 500;
+            transition: background-color 0.2s ease-in-out;
+            min-width: 80px;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+        }
+        .save-button-pending {
+            background-color: #ef4444; /* Tailwind's red-500 */
+        }
+        .save-button-pending:hover {
+            background-color: #dc2626; /* Tailwind's red-600 */
+        }
+        .edit-button {
+            background-color: #3b82f6; /* Tailwind's blue-500 */
+        }
+        .edit-button:hover {
+            background-color: #2563eb; /* Tailwind's blue-600 */
+        }
+        .action-button {
+            padding: 0.625rem 1rem;
+            background-color: #374151; /* Tailwind's gray-700 */
+            color: white;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .action-button:hover {
+            background-color: #4b5563; /* Tailwind's gray-600 */
+        }
+        th, td { /* Base styles for table cells */
+            padding: 0.5rem;
+            text-align: center;
+            border: 1px solid #d1d5db; /* Tailwind's gray-300 */
+        }
+        input[type="text"], input[type="number"]:not(#scoreTable input[type="number"].score) {
+            width: 100%;
+            padding: 0.5rem;
+            margin-top: 0.25rem;
+            border-radius: 0.375rem;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .modal-content p {
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            color: #374151;
+        }
+        .modal-buttons button {
+            margin: 0 0.5rem;
+        }
+
+        /* Responsive Styles */
+        @media (max-width: 640px) {
+            /* ScoreTable: Card View Styles (when not forced to table view) */
+            body:not(.force-table-view) #scoreTable thead {
+                display: none;
+            }
+
+            body:not(.force-table-view) #scoreTable tr,
+            body:not(.force-table-view) #scoreTable td {
+                display: block;
+                width: 100% !important;
+            }
+
+            body:not(.force-table-view) #scoreTable tbody tr {
+                margin-bottom: 0.75rem; /* Reduced space between cards */
+                border: 1px solid #d1d5db;
+                border-radius: 0.5rem;
+                overflow: hidden;
+            }
+            
+            body:not(.force-table-view) #scoreTable td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                text-align: right !important;
+                padding: 0.5rem 0.75rem !important; /* Reduced padding within card cells */
+                border-bottom: 1px solid #e5e7eb;
+            }
+            body:not(.force-table-view) #scoreTable tr td:last-child { /* Last cell in a card row (Action button) */
+                border-bottom: none;
+                justify-content: center;
+                 padding: 0.5rem !important; /* Reduced padding for action button cell */
+            }
+             body:not(.force-table-view) #scoreTable tr td:last-child button {
+                 width: 100%;
+            }
+
+            body:not(.force-table-view) #scoreTable td::before {
+                content: attr(data-label);
+                font-weight: 600;
+                text-align: left;
+                margin-right: 0.75rem; /* Adjusted label margin */
+                color: #4b5563;
+            }
+            
+            body:not(.force-table-view) #scoreTable td:first-child { /* Game # cell */
+                justify-content: center;
+                background-color: #f3f4f6;
+                font-weight: bold;
+                color: #1f2937;
+                padding: 0.5rem 0.75rem !important; /* Consistent padding with other card cells */
+            }
+            body:not(.force-table-view) #scoreTable td:first-child::before {
+                content: ""; 
+                margin-right: 0;
+            }
+
+            body:not(.force-table-view) #scoreTable input[type="number"].score {
+                width: auto; 
+                flex-grow: 1;
+                max-width: 70px; /* Slightly reduced max-width for score input */
+            }
+
+            /* SummaryTable: Styles to keep as table but make compact on mobile */
+            #summaryTable {
+                font-size: 0.8rem; /* Smaller font for summary table */
+            }
+            #summaryTable th,
+            #summaryTable td {
+                padding: 0.25rem 0.3rem !important; /* Reduced padding */
+                /* Ensure they retain table display properties */
+                display: table-cell !important; 
+                text-align: center !important; /* Default center align for player data */
+                white-space: normal; /* Allow content to wrap if needed, except for first col */
+            }
+            #summaryTable th:first-child, /* Metric column header */
+            #summaryTable td[data-label="Metric"] { /* Metric column cells */
+                text-align: left !important; /* Align metric names to the left */
+                white-space: nowrap; /* Prevent metric names from wrapping */
+                font-weight: 600; /* Make metric names bold */
+            }
+            /* Ensure data-labels are NOT shown for summaryTable as it's not in card view */
+            #summaryTable td::before {
+                content: "" !important;
+                display: none !important; /* Hide the pseudo-element entirely */
+            }
+
+
+            /* ScoreTable: Styles to force table view on mobile if toggled */
+            body.force-table-view #scoreTable thead {
+                display: table-header-group !important;
+            }
+            body.force-table-view #scoreTable tr {
+                display: table-row !important;
+            }
+            body.force-table-view #scoreTable td {
+                display: table-cell !important;
+                width: auto !important;
+                text-align: center !important;
+                padding: 0.5rem !important; 
+                border-bottom: 1px solid #d1d5db !important;
+            }
+            body.force-table-view #scoreTable td::before { /* Hide data-labels when in table view */
+                content: "" !important;
+                margin-right: 0 !important;
+                display: none !important;
+            }
+            body.force-table-view #scoreTable tbody tr {
+                margin-bottom: 0 !important;
+                border: 1px solid #d1d5db !important; 
+                border-radius: 0 !important;
+            }
+            body.force-table-view #scoreTable input[type="number"].score {
+                width: 60px !important; 
+            }
+            body.force-table-view #scoreTable tr td:last-child button {
+                 width: auto; 
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex justify-center items-start min-h-screen py-8">
+<div class="container bg-white p-4 sm:p-6 rounded-xl shadow-lg w-full max-w-4xl">
+    <h1 class="text-3xl font-bold text-center text-gray-700 mb-6">Big 2 Tracker</h1>
+
+    <div id="gameDetailsForm" class="mb-6 p-4 border border-gray-200 rounded-lg">
+        <h2 class="text-xl font-semibold mb-3 text-gray-600">Game Setup</h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <input type="text" id="player1" placeholder="Player 1 Name" class="p-2 border rounded-md">
+            <input type="text" id="player2" placeholder="Player 2 Name" class="p-2 border rounded-md">
+            <input type="text" id="player3" placeholder="Player 3 Name" class="p-2 border rounded-md">
+            <input type="text" id="player4" placeholder="Player 4 Name" class="p-2 border rounded-md">
+        </div>
+        <div class="mb-4">
+            <label for="rate" class="block text-sm font-medium text-gray-700">Rate ($ per card):</label>
+            <input type="number" id="rate" value="0.1" step="0.01" class="mt-1 p-2 border rounded-md w-full sm:w-auto">
+        </div>
+        <div class="flex flex-wrap gap-2 items-center">
+            <button onclick="saveGameDetails()" class="action-button">Save Game Details</button>
+            <div class="flex items-center ml-auto">
+                <span class="mr-2 text-sm font-medium text-gray-700 hidden sm:inline">Log View:</span>
+                <button id="viewToggleBtn" class="action-button text-sm py-1 px-3 bg-gray-500 hover:bg-gray-600">Table View</button>
+            </div>
+        </div>
+    </div>
+
+    <h2 class="text-2xl font-semibold text-gray-700 mt-8 mb-4">Summary</h2>
+    <div class="overflow-x-auto">
+        <table id="summaryTable" class="w-full border-collapse border border-gray-300 rounded-lg">
+            <thead class="bg-gray-200">
+            <tr>
+                <th class="p-3 border border-gray-300">Metric</th>
+                <th id="player1Header" class="p-3 border border-gray-300">P1</th>
+                <th id="player2Header" class="p-3 border border-gray-300">P2</th>
+                <th id="player3Header" class="p-3 border border-gray-300">P3</th>
+                <th id="player4Header" class="p-3 border border-gray-300">P4</th>
+            </tr>
+            </thead>
+            <tbody class="bg-white">
+            <tr>
+                <td class="font-medium" data-label="Metric">Total Cards</td>
+                <td id="totalP1" data-label="P1 Total Cards">0</td>
+                <td id="totalP2" data-label="P2 Total Cards">0</td>
+                <td id="totalP3" data-label="P3 Total Cards">0</td>
+                <td id="totalP4" data-label="P4 Total Cards">0</td>
+            </tr>
+            <tr>
+                <td class="font-medium" data-label="Metric">Total Wins</td>
+                <td id="winsP1" data-label="P1 Total Wins">0</td>
+                <td id="winsP2" data-label="P2 Total Wins">0</td>
+                <td id="winsP3" data-label="P3 Total Wins">0</td>
+                <td id="winsP4" data-label="P4 Total Wins">0</td>
+            </tr>
+            <tr>
+                <td class="font-medium" data-label="Metric">Win %</td>
+                <td id="winPctP1" data-label="P1 Win %">0%</td>
+                <td id="winPctP2" data-label="P2 Win %">0%</td>
+                <td id="winPctP3" data-label="P3 Win %">0%</td>
+                <td id="winPctP4" data-label="P4 Win %">0%</td>
+            </tr>
+            <tr>
+                <td class="font-medium" data-label="Metric">Win/Loss $$</td>
+                <td id="wlP1" data-label="P1 W/L $$">$0.00</td>
+                <td id="wlP2" data-label="P2 W/L $$">$0.00</td>
+                <td id="wlP3" data-label="P3 W/L $$">$0.00</td>
+                <td id="wlP4" data-label="P4 W/L $$">$0.00</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h2 class="text-2xl font-semibold text-gray-700 mt-8 mb-4">Game Log</h2>
+    <div class="overflow-x-auto">
+        <table id="scoreTable" class="w-full border-collapse border border-gray-300 rounded-lg">
+            <thead class="bg-gray-200">
+            <tr>
+                <th class="p-3 border border-gray-300">Game #</th>
+                <th id="player1HeaderGame" class="p-3 border border-gray-300">P1</th>
+                <th id="player2HeaderGame" class="p-3 border border-gray-300">P2</th>
+                <th id="player3HeaderGame" class="p-3 border border-gray-300">P3</th>
+                <th id="player4HeaderGame" class="p-3 border border-gray-300">P4</th>
+                <th class="p-3 border border-gray-300">Action</th>
+            </tr>
+            </thead>
+            <tbody class="bg-white">
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-6 flex flex-wrap gap-3 justify-center">
+        <button onclick="addGameRowManuallyIfAllowed()" id="addGameButton" class="action-button" style="display: none;">Add Game Manually</button>
+        <button onclick="editGameDetails()" class="action-button">Edit Game Details</button>
+        <button onclick="confirmClearData()" class="action-button bg-red-600 hover:bg-red-700">Clear All Data</button>
+    </div>
+</div>
+
+<div id="customModal" class="modal-overlay">
+    <div class="modal-content">
+        <p id="modalMessage">This is a modal message.</p>
+        <div id="modalButtons" class="modal-buttons">
+            <button id="modalOkButton" class="action-button bg-blue-500 hover:bg-blue-600">OK</button>
+            <button id="modalCancelButton" class="action-button bg-gray-300 hover:bg-gray-400 text-gray-700" style="display:none;">Cancel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variable for confirm callback
+    let confirmAction = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadSavedData();
+        // applyViewPreference(); // Called within loadSavedData now
+        document.getElementById('viewToggleBtn').addEventListener('click', toggleViewMode);
+        
+        // Modal listeners
+        document.getElementById('modalOkButton').addEventListener('click', () => {
+            if (confirmAction) {
+                confirmAction();
+                confirmAction = null; 
+            }
+            closeModal();
+        });
+        document.getElementById('modalCancelButton').addEventListener('click', () => {
+            confirmAction = null; // Clear action if cancelled
+            closeModal();
+        });
+        // Adjust view on resize
+        window.addEventListener('resize', applyViewPreference);
+    });
+
+    function showModal(message, isConfirm = false, callback = null) {
+        document.getElementById('modalMessage').textContent = message;
+        const modalOverlay = document.getElementById('customModal');
+        const okButton = document.getElementById('modalOkButton');
+        const cancelButton = document.getElementById('modalCancelButton');
+
+        if (isConfirm) {
+            cancelButton.style.display = 'inline-block';
+            confirmAction = callback; // Store the callback
+        } else {
+            cancelButton.style.display = 'none';
+            confirmAction = null;
+        }
+        modalOverlay.classList.add('active');
+    }
+
+    function closeModal() {
+        document.getElementById('customModal').classList.remove('active');
+    }
+
+    function addGameRow() {
+        const tableBody = document.querySelector('#scoreTable tbody');
+        // Game number display is based on current number of actual game rows (saved or being edited).
+        // This counts existing rows and adds 1. If rows are prepended, this logic is fine.
+        const displayGameNumber = tableBody.rows.length + 1; 
+
+
+        const playerNames = [
+            document.getElementById('player1HeaderGame').textContent,
+            document.getElementById('player2HeaderGame').textContent,
+            document.getElementById('player3HeaderGame').textContent,
+            document.getElementById('player4HeaderGame').textContent
+        ];
+
+        const row = document.createElement('tr');
+        // The first <td> in the Game Log is the game number.
+        // It doesn't need a data-label in card view as its content is self-explanatory.
+        // Or, we can give it a generic one like "Game Details" if needed, but CSS hides its ::before.
+        row.innerHTML = `
+            <td class="p-2 border border-gray-300" data-label="Game">Game ${displayGameNumber}</td>
+            <td class="p-2 border border-gray-300" data-label="${playerNames[0]}"><input type="number" class="score" data-player="1" min="0" max="99"></td>
+            <td class="p-2 border border-gray-300" data-label="${playerNames[1]}"><input type="number" class="score" data-player="2" min="0" max="99"></td>
+            <td class="p-2 border border-gray-300" data-label="${playerNames[2]}"><input type="number" class="score" data-player="3" min="0" max="99"></td>
+            <td class="p-2 border border-gray-300" data-label="${playerNames[3]}"><input type="number" class="score" data-player="4" min="0" max="99"></td>
+            <td class="p-2 border border-gray-300" data-label="Action"><button onclick="saveRow(this)" class="table-button save-button-pending">Save</button></td>
+        `;
+        tableBody.insertBefore(row, tableBody.firstChild);
+    }
+
+    function addEmptyRowIfNeeded() {
+        const tableBody = document.querySelector('#scoreTable tbody');
+        const firstRow = tableBody.rows[0];
+        const firstRowButton = firstRow ? firstRow.querySelector('button') : null;
+
+        if (!firstRow || (firstRowButton && !firstRowButton.classList.contains('save-button-pending'))) {
+            addGameRow();
+        }
+    }
+    
+    function addGameRowManuallyIfAllowed() {
+        const tableBody = document.querySelector('#scoreTable tbody');
+        const firstRow = tableBody.rows[0];
+        const firstRowButton = firstRow ? firstRow.querySelector('button') : null;
+
+        if (!firstRow || (firstRowButton && !firstRowButton.classList.contains('save-button-pending'))) {
+            addGameRow();
+        } else {
+            showModal("Please save or fill the current empty game row before adding a new one.");
+        }
+    }
+
+    function saveRow(button) {
+        const row = button.closest('tr');
+        const cells = row.querySelectorAll('input.score');
+        let valid = true;
+        let zeroCount = 0;
+
+        cells.forEach(cell => {
+            const value = cell.value;
+            if (value === '' || parseInt(value) < 0 || parseInt(value) > 99) {
+                valid = false;
+            }
+            if (parseInt(value) === 0) {
+                zeroCount++;
+            }
+        });
+
+        if (!valid) {
+            showModal('All scores must be filled in and be between 0 and 99.');
+            return;
+        }
+        if (zeroCount === 0) {
+            showModal('At least one player must have 0 cards (the winner).');
+            return;
+        }
+        if (zeroCount > 1) { // If more than one winner
+             showModal('Multiple players have 0 cards. This typically means a misdeal or special house rule. Do you want to save this game as is?', true, () => {
+                proceedSave(button, cells); // Proceed if user confirms
+            });
+            return; // Wait for confirmation
+        }
+        // If exactly one winner, or if multiple winners were confirmed.
+        proceedSave(button, cells);
+    }
+    
+    function proceedSave(button, cells){
+        const row = button.closest('tr');
+        cells.forEach(cell => cell.disabled = true);
+        button.textContent = 'Edit';
+        button.classList.remove('save-button-pending');
+        button.classList.add('edit-button');
+        button.onclick = function() { editRow(this); };
+
+        updateScores();
+        saveToLocalStorage();
+        addEmptyRowIfNeeded();
+    }
+
+
+    function editRow(button) {
+        const row = button.closest('tr');
+        const cells = row.querySelectorAll('input.score');
+
+        cells.forEach(cell => cell.disabled = false);
+        button.textContent = 'Save';
+        button.classList.remove('edit-button');
+        button.classList.add('save-button-pending');
+        button.onclick = function() { saveRow(this); };
+
+        if (cells.length > 0) {
+            cells[0].focus();
+        }
+    }
+
+    function updateScores() {
+        const rate = parseFloat(document.getElementById('rate').value) || 0.1;
+        let playerTotals = [0, 0, 0, 0]; // Total cards left for each player over all games
+        let playerWins = [0, 0, 0, 0];   // Total games won by each player
+        // let gamesPlayedCount = 0; // This will be the count of *saved* games
+
+        const gameRows = document.querySelectorAll('#scoreTable tbody tr');
+        
+        // Reset summary table before recalculating
+        ['totalP', 'winsP', 'winPctP', 'wlP'].forEach(prefix => {
+            for (let i = 1; i <= 4; i++) {
+                const el = document.getElementById(`${prefix}${i}`);
+                if (!el) continue; // Should not happen if HTML is correct
+                if (prefix === 'winPctP') el.textContent = '0%';
+                else if (prefix === 'wlP') {
+                    el.textContent = '$0.00';
+                    el.classList.remove('win', 'loss');
+                } else el.textContent = '0';
+            }
+        });
+
+        let actualGamesPlayed = 0;
+        gameRows.forEach(row => {
+            const scoresInRow = row.querySelectorAll('input.score');
+            // A row's scores are counted if its inputs are disabled (meaning it's saved)
+            if (scoresInRow.length > 0 && scoresInRow[0].disabled) {
+                actualGamesPlayed++;
+                scoresInRow.forEach((scoreInput, playerIndex) => {
+                    const value = parseInt(scoreInput.value);
+                    if (!isNaN(value)) {
+                        playerTotals[playerIndex] += value;
+                        if (value === 0) { // Assuming 0 cards means a win for that player in that game
+                            playerWins[playerIndex]++;
+                        }
+                    }
+                });
+            }
+        });
+        
+        const gamesPlayedCount = actualGamesPlayed; // Use the count of actual saved games
+
+        playerTotals.forEach((total, index) => {
+            document.getElementById(`totalP${index + 1}`).textContent = total;
+            document.getElementById(`winsP${index + 1}`).textContent = playerWins[index];
+            const winPct = gamesPlayedCount > 0 ? ((playerWins[index] / gamesPlayedCount) * 100).toFixed(1) : 0;
+            document.getElementById(`winPctP${index + 1}`).textContent = `${winPct}%`;
+        });
+        
+        // W/L $$ Calculation
+        let wlValues = [0, 0, 0, 0]; // Net money for each player
+        if (gamesPlayedCount > 0) {
+            gameRows.forEach(row => {
+                const scoresInRowInputs = row.querySelectorAll('input.score');
+                if (scoresInRowInputs.length > 0 && scoresInRowInputs[0].disabled) { // Process only saved games
+                    const scoresThisGame = Array.from(scoresInRowInputs).map(inp => parseInt(inp.value));
+                    
+                    // Identify winner(s) for this game (score of 0)
+                    const winnersThisGame = [];
+                    scoresThisGame.forEach((score, idx) => {
+                        if (score === 0) {
+                            winnersThisGame.push(idx);
+                        }
+                    });
+
+                    if (winnersThisGame.length > 0) { // If there's at least one winner
+                        scoresThisGame.forEach((score, playerIdx) => {
+                            if (winnersThisGame.includes(playerIdx)) { // This player is a winner
+                                // Collect from losers
+                                scoresThisGame.forEach((loserScore, loserIdx) => {
+                                    if (!winnersThisGame.includes(loserIdx)) {
+                                        // Each winner collects from each loser, divided by number of winners
+                                        wlValues[playerIdx] += (loserScore * rate) / winnersThisGame.length;
+                                    }
+                                });
+                            } else { // This player is a loser
+                                // Pays to each winner
+                                winnersThisGame.forEach(winnerIdx => {
+                                     wlValues[playerIdx] -= (score * rate) / winnersThisGame.length;
+                                });
+                            }
+                        });
+                    }
+                }
+            });
+
+            for (let i = 0; i < 4; i++) {
+                const wlElement = document.getElementById(`wlP${i + 1}`);
+                wlElement.textContent = `$${wlValues[i].toFixed(2)}`;
+                wlElement.classList.remove('win', 'loss');
+                if (wlValues[i] > 0) {
+                    wlElement.classList.add('win');
+                } else if (wlValues[i] < 0) {
+                    wlElement.classList.add('loss');
+                }
+            }
+        }
+    }
+
+    function saveToLocalStorage() {
+        const data = {
+            rate: document.getElementById('rate').value,
+            playerNames: [
+                document.getElementById('player1').value || 'P1',
+                document.getElementById('player2').value || 'P2',
+                document.getElementById('player3').value || 'P3',
+                document.getElementById('player4').value || 'P4'
+            ],
+            rows: [],
+            viewMode: document.body.classList.contains('force-table-view') ? 'table' : 'card' // For scoreTable
+        };
+
+        const tableRows = document.querySelectorAll('#scoreTable tbody tr');
+        tableRows.forEach(row => {
+            const button = row.querySelector('button');
+            // Only save rows that are in a "saved" state (i.e., have an "Edit" button)
+            if (button && button.classList.contains('edit-button')) {
+                const cells = row.querySelectorAll('input.score');
+                const rowData = Array.from(cells).map(cell => cell.value);
+                data.rows.push({ scores: rowData }); 
+            }
+        });
+        data.rows.reverse(); // Store oldest game first for correct prepend on load
+
+        localStorage.setItem('playerScoreData', JSON.stringify(data));
+    }
+
+    function loadSavedData() {
+        const savedData = localStorage.getItem('playerScoreData');
+        const addGameManualButton = document.getElementById('addGameButton');
+
+        if (savedData) {
+            const data = JSON.parse(savedData);
+
+            document.getElementById('rate').value = data.rate || 0.1;
+            const playerInputs = [
+                document.getElementById('player1'), document.getElementById('player2'),
+                document.getElementById('player3'), document.getElementById('player4')
+            ];
+            data.playerNames.forEach((name, index) => {
+                if (playerInputs[index]) playerInputs[index].value = name || `P${index+1}`;
+            });
+
+            updatePlayerHeaders(data.playerNames); 
+
+            const gameDetailsForm = document.getElementById('gameDetailsForm');
+            if (data.playerNames && data.playerNames.some(name => name && name.trim() !== '' && !/^P[1-4]$/.test(name.trim()))) {
+                 gameDetailsForm.style.display = 'none';
+                 if(addGameManualButton) addGameManualButton.style.display = 'none';
+            } else {
+                 gameDetailsForm.style.display = 'block';
+                 if(addGameManualButton) addGameManualButton.style.display = 'inline-block';
+            }
+            
+            // Clear existing rows in table body before loading (important if loadSavedData can be called multiple times)
+            const scoreTableBody = document.querySelector('#scoreTable tbody');
+            while (scoreTableBody.firstChild) {
+                scoreTableBody.removeChild(scoreTableBody.firstChild);
+            }
+
+
+            data.rows.forEach(rowData => { // rows are already reversed for correct historical order
+                addGameRow(); 
+                const newRow = document.querySelector('#scoreTable tbody tr:first-child');
+                const cells = newRow.querySelectorAll('input.score');
+                rowData.scores.forEach((value, index) => {
+                    cells[index].value = value;
+                    cells[index].disabled = true;
+                });
+                const buttonInNewRow = newRow.querySelector('button');
+                buttonInNewRow.textContent = 'Edit';
+                buttonInNewRow.classList.remove('save-button-pending');
+                buttonInNewRow.classList.add('edit-button');
+                buttonInNewRow.onclick = function() { editRow(this); };
+            });
+
+            updateScores(); // Recalculate all summary scores
+            if (gameDetailsForm.style.display === 'none') { // If names were set, add an empty row for new game
+                addEmptyRowIfNeeded();
+            }
+            // Handle viewMode preference from saved data (for scoreTable)
+             if (data.viewMode) { // This key might exist from previous versions
+                localStorage.setItem('viewModePreference', data.viewMode);
+            }
+
+
+        } else { // No saved data
+            document.getElementById('gameDetailsForm').style.display = 'block';
+            if(addGameManualButton) addGameManualButton.style.display = 'inline-block';
+            updatePlayerHeaders(['P1', 'P2', 'P3', 'P4']); // Set default headers
+            // No games to load, so add an empty row if details are not shown (i.e. if we auto-hide form later)
+            // For now, if no data, form is shown, so no empty row needed until form is submitted.
+        }
+        applyViewPreference(); // Apply view preference for scoreTable
+    }
+    
+    function updatePlayerHeaders(playerNamesArray) {
+        const defaultNames = ['P1', 'P2', 'P3', 'P4'];
+        playerNamesArray = playerNamesArray || defaultNames;
+
+        for (let i = 0; i < 4; i++) {
+            const name = (playerNamesArray[i] && playerNamesArray[i].trim() !== '') ? playerNamesArray[i] : defaultNames[i];
+            // Update summary table headers
+            document.getElementById(`player${i+1}Header`).textContent = name;
+            // Update game log table headers
+            document.getElementById(`player${i+1}HeaderGame`).textContent = name;
+        }
+
+        // Update data-labels in summary table (though they are not visible, good for consistency)
+        const summaryMetrics = [
+            { idPrefix: 'totalP', labelSuffix: ' Total Cards' },
+            { idPrefix: 'winsP', labelSuffix: ' Total Wins' },
+            { idPrefix: 'winPctP', labelSuffix: ' Win %' },
+            { idPrefix: 'wlP', labelSuffix: ' W/L $$' }
+        ];
+
+        for (let i = 0; i < 4; i++) {
+            const nameToUse = (playerNamesArray[i] && playerNamesArray[i].trim() !== '') ? playerNamesArray[i] : defaultNames[i];
+            summaryMetrics.forEach(metric => {
+                const cell = document.getElementById(`${metric.idPrefix}${i+1}`);
+                if (cell) {
+                    // For summary table, data-label is mainly for internal consistency, not display.
+                    // The first child is the actual metric name.
+                    if (cell.getAttribute('data-label') !== "Metric") { // Avoid overwriting the "Metric" cell's label
+                         cell.setAttribute('data-label', `${nameToUse}${metric.labelSuffix}`);
+                    }
+                }
+            });
+        }
+    }
+
+    function confirmClearData() {
+        showModal('Are you sure you want to clear all data? This will delete all scores and player names.', true, () => {
+            localStorage.removeItem('playerScoreData');
+            localStorage.removeItem('viewModePreference');
+            location.reload();
+        });
+    }
+
+    function saveGameDetails() {
+        const playerNames = [
+            document.getElementById('player1').value, document.getElementById('player2').value,
+            document.getElementById('player3').value, document.getElementById('player4').value
+        ];
+
+        if (playerNames.some(name => !name || name.trim() === '')) {
+            showModal('Please fill in all player names before proceeding.');
+            return;
+        }
+
+        document.getElementById('gameDetailsForm').style.display = 'none';
+        const addGameManualButton = document.getElementById('addGameButton');
+        if(addGameManualButton) addGameManualButton.style.display = 'none'; 
+
+        updatePlayerHeaders(playerNames);
+        saveToLocalStorage(); 
+        addEmptyRowIfNeeded(); 
+    }
+
+    function editGameDetails() {
+        document.getElementById('gameDetailsForm').style.display = 'block';
+        const addGameManualButton = document.getElementById('addGameButton');
+        // If game details form is shown, and there are no saved games or the first row is not empty,
+        // it might make sense to show the "Add Game Manually" button.
+        // However, the typical flow is to save details then start adding games.
+        // For simplicity, let's keep its visibility tied to whether the form is initially hidden or not.
+        // If user clicks "Edit Game Details", they are likely changing names/rate, not adding games yet.
+        if(addGameManualButton) addGameManualButton.style.display = 'inline-block'; 
+    }
+
+    ['player1', 'player2', 'player3', 'player4'].forEach((id) => {
+        const inputElement = document.getElementById(id);
+        if (inputElement) {
+            inputElement.addEventListener('input', () => {
+                const currentNames = [
+                    document.getElementById('player1').value, document.getElementById('player2').value,
+                    document.getElementById('player3').value, document.getElementById('player4').value
+                ];
+                updatePlayerHeaders(currentNames);
+                if (document.getElementById('gameDetailsForm').style.display === 'none') {
+                    saveToLocalStorage(); 
+                }
+            });
+        }
+    });
+
+    // View Mode Toggle Logic (affects ScoreTable only on mobile)
+    function applyViewPreference() {
+        const preference = localStorage.getItem('viewModePreference'); // For scoreTable
+        const toggleButton = document.getElementById('viewToggleBtn');
+        const body = document.body;
+
+        if (window.innerWidth <= 640) { // Mobile-sized screen
+            toggleButton.style.display = 'inline-block'; // Ensure button is visible
+            if (preference === 'table') { // User wants scoreTable as table
+                body.classList.add('force-table-view');
+                toggleButton.textContent = 'Card View'; // Offers to switch scoreTable to card
+            } else { // Default or 'card' preference for scoreTable
+                body.classList.remove('force-table-view');
+                toggleButton.textContent = 'Table View'; // Offers to switch scoreTable to table
+            }
+        } else { // Desktop-sized screen
+            body.classList.remove('force-table-view'); // Ensure scoreTable is table on desktop
+            toggleButton.style.display = 'none'; // Hide toggle on larger screens
+        }
+    }
+
+    function toggleViewMode() {
+        const body = document.body;
+        const toggleButton = document.getElementById('viewToggleBtn');
+        
+        if (window.innerWidth <= 640) { 
+            if (body.classList.contains('force-table-view')) { // scoreTable is Table, switch to Card
+                body.classList.remove('force-table-view');
+                toggleButton.textContent = 'Table View';
+                localStorage.setItem('viewModePreference', 'card');
+            } else { // scoreTable is Card, switch to Table
+                body.classList.add('force-table-view');
+                toggleButton.textContent = 'Card View';
+                localStorage.setItem('viewModePreference', 'table');
+            }
+        }
+        // No action for desktop as toggle is hidden.
+    }
+</script>
+</body>
+</html>
